@@ -1,0 +1,12 @@
+[Unit]
+Description=Tutti.ch Gratis-Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=pi
+WorkingDirectory=/home/pi/tutti-bot
+ExecStart=/home/pi/tutti-bot/venv/bin/python main.py
+StandardOutput=journal
+StandardError=journal

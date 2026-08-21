@@ -1,0 +1,12 @@
+config.yml
+config-*.yml
+venv/
+__pycache__/
+*.pyc
+seen_listings.json
+seen_listings_*.json
+tutti-bot.log
+tutti-bot-*.log
+*.bak
+*.swp
+.pytest_cache/

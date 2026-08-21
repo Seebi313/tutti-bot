@@ -1,0 +1,68 @@
+# Geteilte Einstellungen — gelten für alle Suchen unter "searches",
+# ausser eine Suche überschreibt sie explizit (siehe zweites Beispiel unten).
+
+location:
+  home: "3000 Bern"  # Dein Standort (für LLM-Kontext und Entfernungsschätzung)
+
+email:
+  smtp_host: smtp.gmail.com
+  smtp_port: 587
+  smtp_user: deine-adresse@gmail.com
+  # Gmail: App-Passwort unter https://myaccount.google.com/apppasswords erstellen
+  # (benötigt 2-Faktor-Authentifizierung)
+  smtp_password: ""
+  from: "Tutti Bot <deine-adresse@gmail.com>"
+  to: deine-adresse@gmail.com
+
+# API Key von https://console.groq.com/keys
+# Ohne Key: Bot bricht mit Fehlermeldung ab (kein ungefiltertes Massen-Senden)
+groq_api_key: ""
+groq_model: openai/gpt-oss-20b
+
+# Push-Benachrichtigungen bei Bot-Fehlern via ntfy (optional, https://ntfy.sh
+# oder selbst gehostet). Ohne diese Keys: kein Alert, Bot läuft trotzdem.
+ntfy:
+  url: http://localhost:8081
+  topic: tutti-bot
+
+# Jede Suche ist eine unabhängige tutti.ch-Abfrage mit eigenem
+# Interessenprofil. Beliebig viele Einträge möglich — einfach eine
+# weitere Suche mit eigenem 'name' und 'free_url' anhängen, kein
+# neuer Code, keine neue Config-Datei, kein neuer systemd-Timer nötig.
+#
+# So findest du deine free_url:
+#   1. tutti.ch im Browser öffnen
+#   2. Filter setzen: Preisbereich, Region, Stichwort — was immer du willst
+#   3. URL aus der Adressleiste kopieren
+searches:
+  - name: haupt
+    free_url: "https://www.tutti.ch/de/q/bern/Ak8DAlMDAkZSlcHJpY2XDwMCRk6hsb2NhdGlvbq1nZW8tY2l0eS1iZXJuBQ"
+    pages: 3  # 20 Inserate pro Seite
+    min_relevance_score: 6
+    interests: |
+      Ich interessiere mich für:
+      - Werkzeug (Bohrmaschinen, Sägen, Handwerkzeug jeder Art)
+      - Möbel (Regale, Tische, Stühle)
+      - Elektronik (Kabel, Adapter, alte Geräte zum Basteln)
+      - Fahrräder und Ersatzteile
+      - Bücher (Sachbücher, Technik)
+
+      NICHT interessiert an:
+      - Kleidung, Schuhe, Schmuck, Taschen
+      - Baby- und Kindersachen
+      - Dekorationsartikel, Bilder, Kunstobjekte
+      - Lebensmittel, Kosmetik
+      - Autos, Motorräder (zu komplex für Gratis)
+
+  # Zweites Beispiel: eigenes Preisprofil + eigener Absender-Name für
+  # diese eine Suche (überschreibt nur "email.from", alles andere wird
+  # vom Top-Level geerbt).
+  - name: werkzeug-budget
+    free_url: "https://www.tutti.ch/de/q?q=bohrmaschine&price_max=50&sortby=newest"
+    pages: 5
+    min_relevance_score: 5
+    email:
+      from: "Tutti Bot — Werkzeug <deine-adresse@gmail.com>"
+    interests: |
+      Gebrauchte Werkzeuge bis CHF 50 — Zustand und Preis/Leistung
+      sind wichtiger als Marke.

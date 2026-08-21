@@ -1,0 +1,10 @@
+[Unit]
+Description=Tutti.ch Gratis-Bot — alle 30 Minuten
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+RandomizedDelaySec=3min
+
+[Install]
+WantedBy=timers.target
