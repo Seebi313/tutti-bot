@@ -1,5 +1,5 @@
 import notifier
-from notifier import _build_html, _card, _fmt_time, send_ntfy_alert, send_notification
+from notifier import _build_html, _build_subject, _build_text, _card, _fmt_time, send_ntfy_alert, send_notification
 
 
 def make_listing(**overrides):
@@ -133,7 +133,7 @@ def test_card_shows_actual_price_not_hardcoded_gratis():
 
 def test_card_falls_back_to_placeholder_when_price_missing():
     card = _card(make_listing(price=""))
-    assert "💰 ?" in card
+    assert "&nbsp;·&nbsp;\n    ? " in card
 
 
 def test_card_escapes_untrusted_listing_fields():
@@ -150,3 +150,30 @@ def test_card_escapes_untrusted_listing_fields():
     assert "<b>Bern</b>" not in card
     assert "&lt;img src=x onerror=alert(1)&gt;" in card
     assert "&lt;script&gt;evil()&lt;/script&gt;" in card
+
+
+def test_subject_names_single_product_and_location():
+    assert _build_subject([make_listing(title="Velo 28 Zoll", location="Bern")]) == "Velo 28 Zoll (Bern)"
+
+
+def test_subject_names_first_two_products_and_counts_rest():
+    listings = [make_listing(title=t) for t in ("Velo", "Sofa", "Lampe", "Tisch")]
+    assert _build_subject(listings) == "Velo, Sofa +2 weitere"
+    assert _build_subject(listings[:2]) == "Velo, Sofa"
+
+
+def test_html_starts_with_hidden_preview_of_all_titles():
+    html = _build_html([make_listing(title="Velo"), make_listing(title="<Sofa>", location="Köniz")])
+    preview = html.split('overflow:hidden;">')[1].split("</div>")[0]
+    assert preview == "Velo (Thun) | &lt;Sofa&gt; (Köniz)"
+
+
+def test_text_part_has_title_stars_and_url():
+    text = _build_text([make_listing(title="Velo", score=8, timestamp="")])
+    assert text.splitlines()[:3] == ["Velo ⭐⭐⭐", "Thun (3600)", "https://www.tutti.ch/de/vi/x/1"]
+
+
+def test_no_emojis_except_stars():
+    import re
+    out = _build_subject([make_listing()]) + _build_html([make_listing()]) + _build_text([make_listing()])
+    assert not re.search("[\U0001F300-\U0001FAFF]", out.replace("⭐", ""))

@@ -32,13 +32,14 @@ def send_ntfy_alert(config: dict, title: str, body: str):
 
 def send_notification(listings: list[dict], config: dict):
     cfg = config["email"]
-    subject = f"🎁 Tutti.ch: {len(listings)} neue Treffer in deiner Nähe"
+    subject = _build_subject(listings)
     html_body = _build_html(listings)
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = cfg.get("from", cfg["smtp_user"])
     msg["To"] = cfg["to"]
+    msg.attach(MIMEText(_build_text(listings), "plain", "utf-8"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     with smtplib.SMTP(cfg["smtp_host"], cfg["smtp_port"]) as smtp:
@@ -50,14 +51,45 @@ def send_notification(listings: list[dict], config: dict):
     logger.info("Email sent to %s (%d listings)", cfg["to"], len(listings))
 
 
+def _build_subject(listings: list[dict]) -> str:
+    first = listings[0]
+    if len(listings) == 1:
+        return f"{first['title']} ({first['location']})"
+    titles = ", ".join(l["title"] for l in listings[:2])
+    rest = len(listings) - 2
+    return titles + (f" +{rest} weitere" if rest > 0 else "")
+
+
+def _preview(listings: list[dict]) -> str:
+    """One line with all titles, shown by mail clients as notification preview."""
+    return " | ".join(f"{l['title']} ({l['location']})" for l in listings)
+
+
+def _build_text(listings: list[dict]) -> str:
+    lines = []
+    for l in listings:
+        lines.append(f"{l['title']} {_stars(l)}".rstrip())
+        meta = [f"{l['location']} ({l['postcode']})", _fmt_time(l.get("timestamp", "")), l.get("price") or ""]
+        lines.append(" · ".join(m for m in meta if m))
+        lines.append(l["url"])
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _stars(l: dict) -> str:
+    score = l.get("score", 0)
+    return "⭐" * max(0, score - 5) if score else ""
+
+
 def _build_html(listings: list[dict]) -> str:
     cards = "".join(_card(l) for l in listings)
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
     return f"""<!DOCTYPE html>
 <html lang="de">
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:680px;margin:0 auto;padding:20px;background:#f0f0f0;">
+  <div style="display:none;max-height:0;overflow:hidden;">{html.escape(_preview(listings))}</div>
   <div style="background:#d62839;color:white;padding:20px 24px;border-radius:8px 8px 0 0;">
-    <h1 style="margin:0;font-size:20px;">🎁 Neue Treffer auf tutti.ch</h1>
+    <h1 style="margin:0;font-size:20px;">Neue Treffer auf tutti.ch</h1>
     <p style="margin:6px 0 0;opacity:.85;font-size:14px;">{len(listings)} relevante Inserate · {now}</p>
   </div>
   <div style="padding:8px 0;">{cards}</div>
@@ -69,10 +101,9 @@ def _build_html(listings: list[dict]) -> str:
 
 
 def _card(l: dict) -> str:
-    score = l.get("score", 0)
-    stars = "⭐" * max(0, score - 5) if score else ""
+    stars = _stars(l)
     reason_html = (
-        f'<p style="color:#555;font-size:13px;font-style:italic;margin:6px 0;">🤖 {html.escape(l["reason"])}</p>'
+        f'<p style="color:#555;font-size:13px;font-style:italic;margin:6px 0;">{html.escape(l["reason"])}</p>'
         if l.get("reason")
         else ""
     )
@@ -88,9 +119,9 @@ def _card(l: dict) -> str:
     <a href="{url}" style="color:#d62839;text-decoration:none;">{html.escape(l['title'])}</a>
   </h2>
   <p style="color:#777;font-size:13px;margin:0 0 6px;">
-    📍 {html.escape(l['location'])} ({html.escape(l['postcode'])}) &nbsp;·&nbsp;
-    🕒 {time_str} &nbsp;·&nbsp;
-    💰 {price} {stars}
+    {html.escape(l['location'])} ({html.escape(l['postcode'])}) &nbsp;·&nbsp;
+    {time_str} &nbsp;·&nbsp;
+    {price} {stars}
   </p>
   {reason_html}
   {desc_html}
